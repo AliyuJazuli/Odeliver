@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "584309799224",
+    "project_id": "odeliver-a31b5",
+    "storage_bucket": "odeliver-a31b5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:584309799224:android:db43cd953d6415f87229cd",
+        "android_client_info": {
+          "package_name": "com.hydr.odeliver"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "584309799224-s49m5mditk8s6rjq7leb2f1fq0siadva.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hydr.odeliver",
+            "certificate_hash": "2efee69080dba21f313fc9d38406cb28ba174a6d"
+          }
+        },
+        {
+          "client_id": "584309799224-gfchpd87k4ajrp2rfhnd50o4fmbue8qh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwyQUKHM3JUtsDdCmUtyLyOv7-PFRE6DI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "584309799224-gfchpd87k4ajrp2rfhnd50o4fmbue8qh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
