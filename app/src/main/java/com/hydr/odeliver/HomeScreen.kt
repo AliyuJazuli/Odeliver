@@ -40,12 +40,10 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel()
 ) {
     val scrollState = rememberScrollState()
-    var selectedTab by remember { mutableIntStateOf(0) }
     val uiState by viewModel.uiState.collectAsState()
 
     var showBottomSheet by remember { mutableStateOf(false) }
     var showAddOptions by remember { mutableStateOf(false) }
-    var showBudgetDialog by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
     var selectedDelivery by remember { mutableStateOf<DeliveryUiModel?>(null) }
     val sheetState = rememberModalBottomSheetState()
@@ -121,7 +119,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Icon(
-                            Icons.Default.ReceiptLong,
+                            Icons.AutoMirrored.Filled.ReceiptLong,
                             contentDescription = null,
                             tint = if (darkTheme) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary
                         )
@@ -156,7 +154,7 @@ fun HomeScreen(
                     }
                 }
             },
-            confirmButton = { Button(onClick = { showReportDialog = false }) { Text("Close") } }
+            confirmButton = { Button(onClick = { showReportDialog = false }) { Text("Close", color = Color.Black) } }
         )
     }
 
@@ -194,9 +192,10 @@ fun HomeScreen(
         },
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
-                NavigationBarItem(selected = selectedTab == 0, onClick = { selectedTab = 0 }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
-                NavigationBarItem(selected = selectedTab == 2, onClick = { navController.navigate(Screen.SalesRecord.route) }, icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) }, label = { Text("Sales") })
-                NavigationBarItem(selected = selectedTab == 3, onClick = { navController.navigate(Screen.Profile.route) }, icon = { Icon(Icons.Default.Person, null) }, label = { Text("Profile") })
+                NavigationBarItem(selected = true, onClick = { }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.Reports.route) }, icon = { Icon(Icons.Default.BarChart, null) }, label = { Text("Reports") })
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.SalesRecord.route) }, icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) }, label = { Text("Sales") })
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.Profile.route) }, icon = { Icon(Icons.Default.Person, null) }, label = { Text("Profile") })
             }
         }
     ) { innerPadding ->
@@ -299,7 +298,7 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatCard(Modifier.weight(1f), "Sales Activity", "${uiState.salesRecords.size} Recorded", Icons.Default.TrendingUp, Color.Blue.copy(.5f), if (darkTheme) Color.White else Color.Black, onClick = { navController.navigate(Screen.SalesRecord.route) })
+                StatCard(Modifier.weight(1f), "Sales Activity", "${uiState.salesRecords.size} Recorded", Icons.AutoMirrored.Filled.TrendingUp, Color.Blue.copy(.5f), if (darkTheme) Color.White else Color.Black, onClick = { navController.navigate(Screen.SalesRecord.route) })
                 StatCard(Modifier.weight(1f), "All Orders", "${uiState.deliveries}", Icons.Default.LocalShipping, Color.Cyan.copy(.3f), if (darkTheme) Color.White else Color.Black, onClick = { navController.navigate(Screen.DeliveriesList.route) })
             }
 

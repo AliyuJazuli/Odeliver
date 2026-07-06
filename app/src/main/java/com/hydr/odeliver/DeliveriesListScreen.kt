@@ -5,7 +5,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -108,9 +109,17 @@ fun DeliveriesListScreen(
             FloatingActionButton(
                 onClick = { navController.navigate(Screen.AddDelivery.route) },
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                contentColor = Color.Black
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Delivery")
+            }
+        },
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.HomeScreen.route) }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.Reports.route) }, icon = { Icon(Icons.Default.BarChart, null) }, label = { Text("Reports") })
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.SalesRecord.route) }, icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) }, label = { Text("Sales") })
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.Profile.route) }, icon = { Icon(Icons.Default.Person, null) }, label = { Text("Profile") })
             }
         }
     ) { padding ->

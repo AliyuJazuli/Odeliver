@@ -8,8 +8,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -54,6 +54,14 @@ fun SalesRecordScreen(
                 contentColor =  Color.Black
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Sale")
+            }
+        },
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.HomeScreen.route) }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.Reports.route) }, icon = { Icon(Icons.Default.BarChart, null) }, label = { Text("Reports") })
+                NavigationBarItem(selected = true, onClick = { }, icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) }, label = { Text("Sales") })
+                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.Profile.route) }, icon = { Icon(Icons.Default.Person, null) }, label = { Text("Profile") })
             }
         }
     ) { padding ->
@@ -126,6 +134,7 @@ fun AddSaleDialog(onDismiss: () -> Unit, onAdd: (String, String, Double, String,
     var price by remember { mutableStateOf("") }
     var quantityType by remember { mutableStateOf("one") }
     var specificQuantity by remember { mutableStateOf("") }
+    var isPricePerItem by remember { mutableStateOf(false) }
     
     val sdfDate = remember { SimpleDateFormat("ddMMyyyy", Locale.getDefault()) }
     val sdfTime = remember { SimpleDateFormat("HHmm", Locale.getDefault()) }
@@ -146,7 +155,37 @@ fun AddSaleDialog(onDismiss: () -> Unit, onAdd: (String, String, Double, String,
             ) {
                 OutlinedTextField(value = customerName, onValueChange = { customerName = it }, label = { Text("Customer Name") }, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                 OutlinedTextField(value = productNumber, onValueChange = { productNumber = it }, label = { Text("Product Name") }, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("Price") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = price,
+                        onValueChange = { price = it },
+                        label = { Text(if (isPricePerItem) "Price Each" else "Total Price") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Per Item", style = MaterialTheme.typography.labelSmall)
+                        Checkbox(checked = isPricePerItem, onCheckedChange = { isPricePerItem = it })
+                    }
+                }
+
+                if (isPricePerItem) {
+                    val qtyValue = when (quantityType) {
+                        "one" -> 1.0
+                        "bulk" -> 1.0
+                        "specific" -> specificQuantity.toDoubleOrNull() ?: 1.0
+                        else -> 1.0
+                    }
+                    val total = (price.toDoubleOrNull() ?: 0.0) * qtyValue
+                    Text(
+                        text = "Total: ${total.formatCurrency()}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 
                 Text("Quantity Type", style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -194,12 +233,21 @@ fun AddSaleDialog(onDismiss: () -> Unit, onAdd: (String, String, Double, String,
         },
         confirmButton = {
             Button(onClick = {
+                val qtyValue = when (quantityType) {
+                    "one" -> 1.0
+                    "bulk" -> 1.0 // Or whatever bulk represents, assuming 1 for total
+                    "specific" -> specificQuantity.toDoubleOrNull() ?: 1.0
+                    else -> 1.0
+                }
+                val rawPrice = price.toDoubleOrNull() ?: 0.0
+                val finalPrice = if (isPricePerItem) rawPrice * qtyValue else rawPrice
+                
                 val finalQuantity = if (quantityType == "specific") specificQuantity else quantityType
                 val finalDate = date.ifBlank { currentDay }
                 val finalTime = time.ifBlank { currentTime }
-                onAdd(customerName, productNumber, price.toDoubleOrNull() ?: 0.0, finalQuantity, finalDate, finalTime)
+                onAdd(customerName, productNumber, finalPrice, finalQuantity, finalDate, finalTime)
             }) {
-                Text("Add")
+                Text("Add", color = Color.Black)
             }
         },
         dismissButton = {
