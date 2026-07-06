@@ -151,6 +151,12 @@ fun MainScreen(
               val viewModel: HomeViewModel = viewModel()
               SalesRecordScreen(navController, viewModel)
           }
+
+          composable(Screen.Reports.route) {
+              val viewModel: HomeViewModel = viewModel()
+              ReportsScreen(navController, viewModel)
+          }
+
       }
   )
 }
