@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.hydr.odeliver.ui.utils.toDisplayText
 import com.hydr.odeliver.ui.utils.SegmentedInputField
+import com.hydr.odeliver.ui.utils.MoneySegmentedInput
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -149,17 +150,18 @@ fun AddDeliveryScreen(
                 }
             }
 
-            OutlinedTextField(
-                value = cost,
-                onValueChange = { cost = it },
-                label = { Text(if (isPricePerItem) "Price Each (₦)" else "Total Cost (₦)") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = if (darkTheme) Color.White.copy(.6f) else Color.Black.copy(.5f)
+            Column {
+                Text(
+                    text = if (isPricePerItem) "Price Each" else "Total Cost",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
                 )
-            )
+                Spacer(modifier = Modifier.height(8.dp))
+                MoneySegmentedInput(
+                    value = cost,
+                    onValueChange = { cost = it }
+                )
+            }
 
             Text("Delivery Type", fontWeight = FontWeight.Bold)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

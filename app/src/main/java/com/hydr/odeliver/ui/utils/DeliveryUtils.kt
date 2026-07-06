@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,15 +22,67 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hydr.odeliver.DeliveryStatus
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+
+class CurrencyVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val originalText = text.text
+        if (originalText.isEmpty()) {
+            return TransformedText(AnnotatedString(""), OffsetMapping.Identity)
+        }
+
+        // Add thousands separators
+        val formatted = StringBuilder()
+        val reversedText = originalText.reversed()
+        for (i in reversedText.indices) {
+            formatted.append(reversedText[i])
+            if ((i + 1) % 3 == 0 && i != reversedText.lastIndex) {
+                formatted.append(",")
+            }
+        }
+        val out = "₦" + formatted.reverse().toString()
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 0) return 0 // Keep at 0 if empty/start
+                // Nigeria symbol adds 1 offset
+                val commasBefore = if (offset > 1) (offset - 1) / 3 else 0
+                return offset + commasBefore + 1
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 1) return 0
+                val adjustedOffset = offset - 1
+                var originalOffset = 0
+                var transformedOffset = 0
+                while (transformedOffset < adjustedOffset && originalOffset < originalText.length) {
+                    transformedOffset++
+                    originalOffset++
+                    if ((originalText.length - originalOffset) % 3 == 0 && originalOffset != originalText.length) {
+                        transformedOffset++
+                    }
+                }
+                return originalOffset
+            }
+        }
+
+        return TransformedText(AnnotatedString(out), offsetMapping)
+    }
+}
 
 fun DeliveryStatus.toDisplayColor(): Color {
     return when (this) {
@@ -72,6 +126,111 @@ fun String.formatDisplayTime(): String {
     } catch (e: Exception) {
         this
     }
+}
+
+@Composable
+fun MoneySegmentedInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    maxDigits: Int = 9
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = { newValue ->
+            val digitsOnly = newValue.filter { char -> char.isDigit() }
+            if (digitsOnly.length <= maxDigits) {
+                onValueChange(digitsOnly)
+            }
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        decorationBox = { innerTextField ->
+            Box(contentAlignment = Alignment.CenterStart) {
+                Box(modifier = Modifier.alpha(0f)) {
+                    innerTextField()
+                }
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "₦",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                    
+                    for (i in 0 until maxDigits) {
+                        val digitIndex = i - (maxDigits - value.length)
+                        val char = if (digitIndex >= 0) value[digitIndex].toString() else ""
+                        
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // Magnitude label
+                            val positionFromRight = maxDigits - 1 - i
+                            val label = when (positionFromRight) {
+                                8 -> "HM"
+                                7 -> "TM"
+                                6 -> "M"
+                                5 -> "HT"
+                                4 -> "TT"
+                                3 -> "T"
+                                2 -> "H"
+                                1 -> "T"
+                                0 -> "O"
+                                else -> ""
+                            }
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 8.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                            
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 30.dp, height = 44.dp)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (char.isNotEmpty()) 
+                                            MaterialTheme.colorScheme.primary 
+                                        else 
+                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    )
+                                    .background(
+                                        if (char.isNotEmpty())
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                                        else
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = char,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                
+                                // Visual indicator for comma positions (thousands)
+                                if (positionFromRight > 0 && positionFromRight % 3 == 0) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .padding(bottom = 2.dp, end = 1.dp)
+                                            .size(4.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
 }
 
 @Composable

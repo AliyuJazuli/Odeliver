@@ -15,6 +15,7 @@ import com.google.android.gms.tasks.Task
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import androidx.compose.ui.graphics.Color
 import com.hydr.odeliver.ui.utils.toDisplayColor
@@ -217,8 +218,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val currentUser = auth.currentUser
         if (currentUser != null) {
             observeUser(currentUser.uid)
-            observeDeliveries(currentUser.uid)
-            observeSales(currentUser.uid)
+            startDataObservation(currentUser.uid)
         } else {
             _uiState.value = _uiState.value.copy(
                 shopName = "Guest Account",
@@ -234,8 +234,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.value = _uiState.value.copy(
                         shopName = user.shopName.ifEmpty { "New Shop" },
                         businessAddress = user.address.ifEmpty { "Add Address" },
-                        budget = user.budget,
-                        netSpent = user.budget - _uiState.value.spent
+                        budget = user.budget
                     )
                 } else {
                     val currentUser = auth.currentUser
@@ -248,9 +247,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun observeDeliveries(uid: String) {
+    private fun startDataObservation(uid: String) {
         viewModelScope.launch {
-            deliveryDao.getDeliveriesByUser(uid).collectLatest { deliveries ->
+            combine(
+                deliveryDao.getDeliveriesByUser(uid),
+                saleDao.getSalesByUser(uid)
+            ) { deliveries, sales ->
                 val mappedDeliveries = deliveries.map {
                     DeliveryUiModel(
                         id = it.id,
@@ -270,52 +272,54 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
 
-                // Expenses are Incoming deliveries that have been DELIVERED
+                val mappedSales = sales.map {
+                    SaleUiModel(
+                        id = it.id,
+                        customerName = it.customerName,
+                        productNumber = it.productNumber,
+                        price = it.price,
+                        quantity = it.quantity,
+                        date = it.date,
+                        time = it.time
+                    )
+                }
+
+                // Revenue = Sales Records + Outgoing Deliveries (that are Delivered)
+                val salesRevenue = sales.sumOf { it.price }
+                val deliveredOutgoing = deliveries.filter { it.isOutgoing && it.status == DeliveryStatus.DELIVERED }
+                val deliveryRevenue = deliveredOutgoing.sumOf { if (it.isPricePerItem) it.cost * it.numberOfProducts else it.cost }
+                
+                val totalRevenue = salesRevenue + deliveryRevenue
+                val totalSalesCount = sales.size + deliveredOutgoing.size
+
+                // Expenses = Incoming deliveries that have been DELIVERED
                 val totalExpenses = deliveries
                     .filter { !it.isOutgoing && it.status == DeliveryStatus.DELIVERED }
                     .sumOf { if (it.isPricePerItem) it.cost * it.numberOfProducts else it.cost }
                 
-                // Total cost of ALL incoming deliveries
+                // Total cost of ALL incoming deliveries (Inventory value)
                 val incomingCost = deliveries
                     .filter { !it.isOutgoing }
                     .sumOf { if (it.isPricePerItem) it.cost * it.numberOfProducts else it.cost }
 
                 val pendingCount = deliveries.count { it.status != DeliveryStatus.DELIVERED && it.status != DeliveryStatus.CANCELLED }
                 
-                _uiState.value = _uiState.value.copy(
+                _uiState.value.copy(
                     allDeliveries = mappedDeliveries,
                     upcomingDeliveries = mappedDeliveries.filter { 
                         it.statusEnum != DeliveryStatus.DELIVERED && it.statusEnum != DeliveryStatus.CANCELLED
                     },
+                    salesRecords = mappedSales,
                     deliveries = deliveries.size,
+                    sales = totalSalesCount,
                     spent = totalExpenses,
+                    totalSalesAmount = totalRevenue,
                     incomingCost = incomingCost,
                     pendingDeliveriesCount = pendingCount,
-                    netSpent = _uiState.value.totalSalesAmount - totalExpenses
+                    netSpent = totalRevenue - totalExpenses
                 )
-            }
-        }
-    }
-
-    private fun observeSales(uid: String) {
-        viewModelScope.launch {
-            saleDao.getSalesByUser(uid).collectLatest { sales ->
-                val totalSales = sales.sumOf { it.price }
-                _uiState.value = _uiState.value.copy(
-                    salesRecords = sales.map {
-                        SaleUiModel(
-                            id = it.id,
-                            customerName = it.customerName,
-                            productNumber = it.productNumber,
-                            price = it.price,
-                            quantity = it.quantity,
-                            date = it.date,
-                            time = it.time
-                        )
-                    },
-                    totalSalesAmount = totalSales,
-                    netSpent = totalSales - _uiState.value.spent
-                )
+            }.collectLatest { newState ->
+                _uiState.value = newState
             }
         }
     }

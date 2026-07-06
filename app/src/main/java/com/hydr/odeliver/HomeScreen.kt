@@ -298,7 +298,7 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatCard(Modifier.weight(1f), "Sales Activity", "${uiState.salesRecords.size} Recorded", Icons.AutoMirrored.Filled.TrendingUp, Color.Blue.copy(.5f), if (darkTheme) Color.White else Color.Black, onClick = { navController.navigate(Screen.SalesRecord.route) })
+                StatCard(Modifier.weight(1f), "Sales Activity", "${uiState.sales} Recorded", Icons.AutoMirrored.Filled.TrendingUp, Color.Blue.copy(.5f), if (darkTheme) Color.White else Color.Black, onClick = { navController.navigate(Screen.SalesRecord.route) })
                 StatCard(Modifier.weight(1f), "All Orders", "${uiState.deliveries}", Icons.Default.LocalShipping, Color.Cyan.copy(.3f), if (darkTheme) Color.White else Color.Black, onClick = { navController.navigate(Screen.DeliveriesList.route) })
             }
 

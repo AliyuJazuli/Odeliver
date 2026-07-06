@@ -24,6 +24,7 @@ import com.hydr.odeliver.ui.utils.formatCurrency
 import com.hydr.odeliver.ui.utils.formatDisplayDate
 import com.hydr.odeliver.ui.utils.formatDisplayTime
 import com.hydr.odeliver.ui.utils.SegmentedInputField
+import com.hydr.odeliver.ui.utils.MoneySegmentedInput
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -156,18 +157,24 @@ fun AddSaleDialog(onDismiss: () -> Unit, onAdd: (String, String, Double, String,
                 OutlinedTextField(value = customerName, onValueChange = { customerName = it }, label = { Text("Customer Name") }, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                 OutlinedTextField(value = productNumber, onValueChange = { productNumber = it }, label = { Text("Product Name") }, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                 
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = price,
-                        onValueChange = { price = it },
-                        label = { Text(if (isPricePerItem) "Price Each" else "Total Price") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = if (isPricePerItem) "Price Each" else "Total Price",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
                     )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Per Item", style = MaterialTheme.typography.labelSmall)
-                        Checkbox(checked = isPricePerItem, onCheckedChange = { isPricePerItem = it })
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            MoneySegmentedInput(
+                                value = price,
+                                onValueChange = { price = it }
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Per Item", style = MaterialTheme.typography.labelSmall)
+                            Checkbox(checked = isPricePerItem, onCheckedChange = { isPricePerItem = it })
+                        }
                     }
                 }
 

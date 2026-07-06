@@ -49,8 +49,13 @@ fun ReportsScreen(
         uiState.allDeliveries.filter { isDateInPeriod(it.date, selectedPeriod) }
     }
 
-    val periodRevenue = filteredSales.sumOf { it.price }
-    val periodExpenses = filteredDeliveries.sumOf { it.cost }
+    val periodRevenue = filteredSales.sumOf { it.price } + 
+            filteredDeliveries.filter { it.isOutgoing && it.statusEnum == DeliveryStatus.DELIVERED }
+                .sumOf { if (it.isPricePerItem) it.cost * it.numberOfProducts else it.cost }
+    
+    val periodExpenses = filteredDeliveries.filter { !it.isOutgoing && it.statusEnum == DeliveryStatus.DELIVERED }
+        .sumOf { if (it.isPricePerItem) it.cost * it.numberOfProducts else it.cost }
+
     val periodNet = periodRevenue - periodExpenses
 
     Scaffold(
@@ -199,9 +204,11 @@ fun FinancialDetails(sales: List<SaleUiModel>, deliveries: List<DeliveryUiModel>
     val avgSale = if (sales.isNotEmpty()) sales.map { it.price }.average() else 0.0
     val topCustomer = sales.groupBy { it.customerName }.maxByOrNull { it.value.size }?.key ?: "N/A"
     
-    val totalRevenue = sales.sumOf { it.price }
-    val totalCost = deliveries.sumOf { it.cost }
+    val totalRevenue = sales.sumOf { it.price } + deliveries.filter { it.isOutgoing && it.statusEnum == DeliveryStatus.DELIVERED }.sumOf { if (it.isPricePerItem) it.cost * it.numberOfProducts else it.cost }
+    val totalCost = deliveries.filter { !it.isOutgoing && it.statusEnum == DeliveryStatus.DELIVERED }.sumOf { if (it.isPricePerItem) it.cost * it.numberOfProducts else it.cost }
     val profitMargin = if (totalRevenue > 0) ((totalRevenue - totalCost) / totalRevenue * 100) else 0.0
+    
+    val totalSalesCount = sales.size + deliveries.count { it.isOutgoing && it.statusEnum == DeliveryStatus.DELIVERED }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -232,7 +239,7 @@ fun FinancialDetails(sales: List<SaleUiModel>, deliveries: List<DeliveryUiModel>
             InfoMiniCard(
                 modifier = Modifier.weight(1f),
                 label = "Transaction Count",
-                value = sales.size.toString(),
+                value = totalSalesCount.toString(),
                 icon = Icons.Default.Receipt,
                 color = Color(0xFFFF9800)
             )
@@ -261,7 +268,7 @@ fun FinancialDetails(sales: List<SaleUiModel>, deliveries: List<DeliveryUiModel>
             val title = if (item is SaleUiModel) item.productNumber else (item as DeliveryUiModel).itemName
             val subtitle = if (item is SaleUiModel) item.customerName else (item as DeliveryUiModel).customerName
             val amount = if (item is SaleUiModel) item.price else (item as DeliveryUiModel).cost
-            val isIncome = type == "Sale" || (item is DeliveryUiModel && !item.isOutgoing)
+            val isIncome = type == "Sale" || (item is DeliveryUiModel && item.isOutgoing)
 
             TransactionRow(title, subtitle, amount.formatCurrency(), isIncome)
         }
