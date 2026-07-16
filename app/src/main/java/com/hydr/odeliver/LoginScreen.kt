@@ -379,7 +379,7 @@ fun LoginScreen(
                    elevation = ButtonDefaults.buttonElevation(10.dp),
                    colors = ButtonDefaults.buttonColors(
                        containerColor = MaterialTheme.colorScheme.primary,
-                       contentColor = MaterialTheme.colorScheme.onPrimary
+                       contentColor = if (darkTheme) MaterialTheme.colorScheme.onPrimary else Color.Black
                    )
                ) {
                    Text(

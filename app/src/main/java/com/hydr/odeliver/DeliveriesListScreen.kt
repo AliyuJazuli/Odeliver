@@ -138,13 +138,7 @@ fun DeliveriesListScreen(
             ) {
                 items(filteredDeliveries) { delivery ->
                     UpcomingDeliveryItem(
-                        time = delivery.time,
-                        date = delivery.date,
-                        itemName = delivery.itemName,
-                        customerName = delivery.customerName,
-                        status = delivery.status,
-                        statusColor = delivery.statusColor,
-                        isOutgoing = delivery.isOutgoing,
+                        delivery = delivery,
                         onClick = {
                             selectedDelivery = delivery
                             showBottomSheet = true

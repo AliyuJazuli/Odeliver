@@ -1,10 +1,11 @@
 package com.hydr.odeliver
 
-import android.R.attr.tint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import com.hydr.odeliver.ui.utils.toDisplayText
 import com.hydr.odeliver.ui.utils.formatCurrency
 import com.hydr.odeliver.ui.utils.formatDisplayDate
@@ -39,8 +43,11 @@ fun HomeScreen(
     onThemeToggle: () -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
-    val scrollState = rememberScrollState()
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
     var showBottomSheet by remember { mutableStateOf(false) }
     var showAddOptions by remember { mutableStateOf(false) }
@@ -159,15 +166,26 @@ fun HomeScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "ODeliver",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy((-4).dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_launcher_background),
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Text(
+                            text = "Deliver",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 },
                 actions = {
                     IconButton(onClick = onThemeToggle) {
@@ -193,13 +211,21 @@ fun HomeScreen(
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
                 NavigationBarItem(
-                    selected = true,
-                    onClick = { },
+                    selected = currentRoute == Screen.HomeScreen.route,
+                    onClick = { 
+                        if (currentRoute != Screen.HomeScreen.route) {
+                            navController.navigate(Screen.HomeScreen.route) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    },
                     icon = { Icon(Icons.Default.Home, null) },
                     label = { Text("Home") }
                 )
                 NavigationBarItem(
-                    selected = false,
+                    selected = currentRoute == Screen.Reports.route,
                     onClick = {
                         navController.navigate(Screen.Reports.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -211,7 +237,7 @@ fun HomeScreen(
                     label = { Text("Reports") }
                 )
                 NavigationBarItem(
-                    selected = false,
+                    selected = currentRoute == Screen.SalesRecord.route,
                     onClick = {
                         navController.navigate(Screen.SalesRecord.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -223,7 +249,7 @@ fun HomeScreen(
                     label = { Text("Sales") }
                 )
                 NavigationBarItem(
-                    selected = false,
+                    selected = currentRoute == Screen.Profile.route,
                     onClick = {
                         navController.navigate(Screen.Profile.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -237,130 +263,142 @@ fun HomeScreen(
             }
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(scrollState).padding(16.dp)) {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = if (darkTheme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(.3f))
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = uiState.shopName,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                color =  MaterialTheme.colorScheme.onPrimary
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
+        ) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (darkTheme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(.3f)
+                    )
+                ) {
+                    val contentColor = if (darkTheme) Color.White else Color.Black
+                    Column(modifier = Modifier.padding(24.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = uiState.businessAddress,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                                    text = uiState.shopName,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = contentColor
                                 )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.LocationOn,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = contentColor.copy(alpha = 0.7f)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = uiState.businessAddress,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = contentColor.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(contentColor.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Storefront, null, tint = contentColor)
                             }
                         }
-                        Box(
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(contentColor.copy(alpha = 0.1f))
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Storefront, null, tint = MaterialTheme.colorScheme.onPrimary)
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.1f))
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Sales Revenue",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                            Column {
+                                Text(
+                                    text = "Sales Revenue",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = contentColor.copy(alpha = 0.8f)
+                                )
+                                Text(
+                                    text = uiState.totalSalesAmount.formatCurrency(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = contentColor
+                                )
+                            }
+
+                            VerticalDivider(
+                                modifier = Modifier.height(40.dp),
+                                color = contentColor.copy(alpha = 0.2f)
                             )
-                            Text(
-                                text = uiState.totalSalesAmount.formatCurrency(),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                        
-                        VerticalDivider(
-                            modifier = Modifier.height(40.dp),
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
-                        )
-                        
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "Incoming Cost",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                            )
-                            Text(
-                                text = uiState.incomingCost.formatCurrency(),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
+
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = "Incoming Cost",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = contentColor.copy(alpha = 0.8f)
+                                )
+                                Text(
+                                    text = uiState.incomingCost.formatCurrency(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = contentColor
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatCard(Modifier.weight(1f), "Net Balance", uiState.netSpent.formatCurrency(), Icons.Default.Scale, MaterialTheme.colorScheme.secondaryContainer, if (darkTheme) Color.White else Color.Black, onClick = { showReportDialog = true })
-                StatCard(Modifier.weight(1f), "Total Expenses", uiState.spent.formatCurrency(), Icons.Default.Payments, Color.Magenta.copy(.4f), if (darkTheme) Color.White else Color.Black)
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+            
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    StatCard(Modifier.weight(1f), "Net Balance", uiState.netSpent.formatCurrency(), Icons.Default.Scale, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, onClick = { showReportDialog = true })
+                    StatCard(Modifier.weight(1f), "Total Expenses", uiState.spent.formatCurrency(), Icons.Default.Payments, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+                }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatCard(Modifier.weight(1f), "Sales Activity", "${uiState.sales} Recorded", Icons.AutoMirrored.Filled.TrendingUp, Color.Blue.copy(.5f), if (darkTheme) Color.White else Color.Black, onClick = { navController.navigate(Screen.SalesRecord.route) })
-                StatCard(Modifier.weight(1f), "All Orders", "${uiState.deliveries}", Icons.Default.LocalShipping, Color.Cyan.copy(.3f), if (darkTheme) Color.White else Color.Black, onClick = { navController.navigate(Screen.DeliveriesList.route) })
+            
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+            
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    StatCard(Modifier.weight(1f), "Sales Activity", "${uiState.sales} Recorded", Icons.AutoMirrored.Filled.TrendingUp, MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer, onClick = { navController.navigate(Screen.SalesRecord.route) })
+                    StatCard(Modifier.weight(1f), "All Orders", "${uiState.deliveries}", Icons.Default.LocalShipping, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, onClick = { navController.navigate(Screen.DeliveriesList.route) })
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("Upcoming Deliveries", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text("Upcoming Deliveries", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            }
 
             if (uiState.upcomingDeliveries.isEmpty()) {
-                Text(text = "No upcoming deliveries.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
+                item {
+                    Text(text = "No upcoming deliveries.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
+                }
             } else {
-                uiState.upcomingDeliveries.forEach { delivery ->
+                items(uiState.upcomingDeliveries, key = { it.id }) { delivery ->
                     UpcomingDeliveryItem(
-                        time = delivery.time,
-                        date = delivery.date,
-                        itemName = delivery.itemName,
-                        customerName = delivery.customerName,
-                        status = delivery.status,
-                        statusColor = delivery.statusColor,
-                        isOutgoing = delivery.isOutgoing,
+                        delivery = delivery,
                         onClick = { selectedDelivery = delivery; showBottomSheet = true }
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(80.dp))
         }
 
         if (showBottomSheet && selectedDelivery != null) {
@@ -389,7 +427,8 @@ fun StatCard(modifier: Modifier, label: String, value: String, icon: ImageVector
 }
 
 @Composable
-fun UpcomingDeliveryItem(time: String, date: String, itemName: String, customerName: String, status: String, statusColor: Color, isOutgoing: Boolean = true, onClick: () -> Unit = {}) {
+fun UpcomingDeliveryItem(delivery: DeliveryUiModel, onClick: () -> Unit = {}) {
+    val isOutgoing = delivery.isOutgoing
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
@@ -411,10 +450,10 @@ fun UpcomingDeliveryItem(time: String, date: String, itemName: String, customerN
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = itemName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = delivery.itemName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 }
                 Text(
-                    text = "${if (isOutgoing) "For" else "From"} $customerName",
+                    text = "${if (isOutgoing) "For" else "From"} ${delivery.customerName}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -422,11 +461,11 @@ fun UpcomingDeliveryItem(time: String, date: String, itemName: String, customerN
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.AccessTime, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "${time.formatDisplayTime()} • ${date.formatDisplayDate()}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "${delivery.time.formatDisplayTime()} • ${delivery.date.formatDisplayDate()}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
             }
-            Surface(color = statusColor.copy(alpha = 0.2f), contentColor = statusColor, shape = RoundedCornerShape(12.dp)) {
-                Text(text = status, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
+            Surface(color = delivery.statusColor.copy(alpha = 0.2f), contentColor = delivery.statusColor, shape = RoundedCornerShape(12.dp)) {
+                Text(text = delivery.status, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold)
             }
         }
     }

@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -45,35 +47,40 @@ class CurrencyVisualTransformation : VisualTransformation {
             return TransformedText(AnnotatedString(""), OffsetMapping.Identity)
         }
 
-        // Add thousands separators
+        val len = originalText.length
         val formatted = StringBuilder()
-        val reversedText = originalText.reversed()
-        for (i in reversedText.indices) {
-            formatted.append(reversedText[i])
-            if ((i + 1) % 3 == 0 && i != reversedText.lastIndex) {
+        for (i in 0 until len) {
+            formatted.append(originalText[i])
+            if ((len - i - 1) % 3 == 0 && i != len - 1) {
                 formatted.append(",")
             }
         }
-        val out = "₦" + formatted.reverse().toString()
+        val out = "₦$formatted"
 
         val offsetMapping = object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
-                if (offset <= 0) return 0 // Keep at 0 if empty/start
-                // Nigeria symbol adds 1 offset
-                val commasBefore = if (offset > 1) (offset - 1) / 3 else 0
-                return offset + commasBefore + 1
+                if (offset < 0) return 0
+                val safeOffset = offset.coerceAtMost(len)
+                var commasBefore = 0
+                for (i in 0 until safeOffset) {
+                    if ((len - i - 1) % 3 == 0 && i != len - 1) {
+                        commasBefore++
+                    }
+                }
+                return safeOffset + commasBefore + 1 // +1 for ₦
             }
 
             override fun transformedToOriginal(offset: Int): Int {
                 if (offset <= 1) return 0
-                val adjustedOffset = offset - 1
                 var originalOffset = 0
-                var transformedOffset = 0
-                while (transformedOffset < adjustedOffset && originalOffset < originalText.length) {
-                    transformedOffset++
+                var currentTransformed = 1 // Start after ₦
+                for (i in 0 until len) {
+                    currentTransformed++ // digit
                     originalOffset++
-                    if ((originalText.length - originalOffset) % 3 == 0 && originalOffset != originalText.length) {
-                        transformedOffset++
+                    if (currentTransformed >= offset) return originalOffset
+                    if ((len - i - 1) % 3 == 0 && i != len - 1) {
+                        currentTransformed++ // comma
+                        if (currentTransformed >= offset) return originalOffset
                     }
                 }
                 return originalOffset
@@ -99,7 +106,7 @@ fun DeliveryStatus.toDisplayText(): String {
 
 fun Double.formatCurrency(): String {
     val formatter = NumberFormat.getNumberInstance(Locale.US)
-    formatter.minimumFractionDigits = 2
+    formatter.minimumFractionDigits = 0
     formatter.maximumFractionDigits = 2
     return "₦" + formatter.format(this)
 }
@@ -132,9 +139,10 @@ fun String.formatDisplayTime(): String {
 fun MoneySegmentedInput(
     value: String,
     onValueChange: (String) -> Unit,
-    maxDigits: Int = 9
+    modifier: Modifier = Modifier,
+    maxDigits: Int = 12
 ) {
-    BasicTextField(
+    OutlinedTextField(
         value = value,
         onValueChange = { newValue ->
             val digitsOnly = newValue.filter { char -> char.isDigit() }
@@ -142,94 +150,28 @@ fun MoneySegmentedInput(
                 onValueChange(digitsOnly)
             }
         },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        decorationBox = { innerTextField ->
-            Box(contentAlignment = Alignment.CenterStart) {
-                Box(modifier = Modifier.alpha(0f)) {
-                    innerTextField()
-                }
-                
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = "₦",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
-                    
-                    for (i in 0 until maxDigits) {
-                        val digitIndex = i - (maxDigits - value.length)
-                        val char = if (digitIndex >= 0) value[digitIndex].toString() else ""
-                        
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // Magnitude label
-                            val positionFromRight = maxDigits - 1 - i
-                            val label = when (positionFromRight) {
-                                8 -> "HM"
-                                7 -> "TM"
-                                6 -> "M"
-                                5 -> "HT"
-                                4 -> "TT"
-                                3 -> "T"
-                                2 -> "H"
-                                1 -> "T"
-                                0 -> "O"
-                                else -> ""
-                            }
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 8.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                            
-                            Box(
-                                modifier = Modifier
-                                    .size(width = 30.dp, height = 44.dp)
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (char.isNotEmpty()) 
-                                            MaterialTheme.colorScheme.primary 
-                                        else 
-                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                        shape = RoundedCornerShape(6.dp)
-                                    )
-                                    .background(
-                                        if (char.isNotEmpty())
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                                        else
-                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = char,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                
-                                // Visual indicator for comma positions (thousands)
-                                if (positionFromRight > 0 && positionFromRight % 3 == 0) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.BottomEnd)
-                                            .padding(bottom = 2.dp, end = 1.dp)
-                                            .size(4.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        modifier = modifier.width(180.dp),
+        placeholder = { 
+            Text(
+                "₦0", 
+                style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ) 
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        visualTransformation = CurrencyVisualTransformation(),
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge.copy(
+            textAlign = TextAlign.Start,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        ),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            focusedTextColor = MaterialTheme.colorScheme.primary,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+        )
     )
 }
 

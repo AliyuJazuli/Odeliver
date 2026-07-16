@@ -118,13 +118,23 @@ fun OnboardingScreen(
                 )
 
 
-                Text(
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 40.dp),
-                    text = "Odeliver",
-                    fontSize = 39.sp,
-                    color = Color.LightGray,
-                    fontWeight = FontWeight.Bold
-                )
+                    horizontalArrangement = Arrangement.spacedBy((-6).dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_background),
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Text(
+                        text = "Deliver",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Text(
                     modifier = Modifier.padding(top = 16.dp, bottom = 0.dp),
                     text = "Track your sales, deliveries, and",

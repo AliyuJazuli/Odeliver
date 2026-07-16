@@ -40,30 +40,33 @@ import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        val themeManager = ThemeManager(this)
+        val isDark = themeManager.isDarkTheme()
+        
+        // Explicitly set the splash theme based on user preference to override system theme
+        if (isDark) {
+            setTheme(R.style.Theme_App_Starting_Dark)
+        } else {
+            setTheme(R.style.Theme_App_Starting)
+        }
+
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
         setContent {
-            val context = LocalContext.current
-            val themeManager = remember { ThemeManager(context) }
-            val systemTheme = isSystemInDarkTheme()
-            
-            var darkTheme by remember {
-                mutableStateOf(themeManager.isDarkTheme(systemTheme))
-            }
+            val themeManagerInner = remember { themeManager }
+            var darkTheme by remember { mutableStateOf(isDark) }
 
             OdeliverTheme(darkTheme = darkTheme) {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MainScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        darkTheme = darkTheme,
-                        onThemeToggle = {
-                            val newTheme = !darkTheme
-                            darkTheme = newTheme
-                            themeManager.setDarkTheme(newTheme)
-                        }
-                    )
-                }
+                MainScreen(
+                    darkTheme = darkTheme,
+                    onThemeToggle = {
+                        val newTheme = !darkTheme
+                        darkTheme = newTheme
+                        themeManagerInner.setDarkTheme(newTheme)
+                    }
+                )
             }
         }
     }

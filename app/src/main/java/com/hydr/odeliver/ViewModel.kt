@@ -251,7 +251,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             combine(
                 deliveryDao.getDeliveriesByUser(uid),
-                saleDao.getSalesByUser(uid)
+                saleDao.getAllSalesByUser(uid)
             ) { deliveries, sales ->
                 val mappedDeliveries = deliveries.map {
                     DeliveryUiModel(
@@ -272,7 +272,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
 
-                val mappedSales = sales.map {
+                val activeSales = sales.filter { !it.isSoftDeleted }
+                val mappedSales = activeSales.map {
                     SaleUiModel(
                         id = it.id,
                         customerName = it.customerName,
@@ -284,13 +285,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
 
-                // Revenue = Sales Records + Outgoing Deliveries (that are Delivered)
+                // Revenue = ALL Sales Records (including soft-deleted) + Outgoing Deliveries (Delivered)
                 val salesRevenue = sales.sumOf { it.price }
                 val deliveredOutgoing = deliveries.filter { it.isOutgoing && it.status == DeliveryStatus.DELIVERED }
                 val deliveryRevenue = deliveredOutgoing.sumOf { if (it.isPricePerItem) it.cost * it.numberOfProducts else it.cost }
                 
                 val totalRevenue = salesRevenue + deliveryRevenue
-                val totalSalesCount = sales.size + deliveredOutgoing.size
+                val totalSalesCount = activeSales.size + deliveredOutgoing.size
 
                 // Expenses = Incoming deliveries that have been DELIVERED
                 val totalExpenses = deliveries
@@ -378,9 +379,40 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun deleteSale(id: Int) {
+    fun updateSale(
+        id: Int,
+        customerName: String,
+        productNumber: String,
+        price: Double,
+        quantity: String,
+        date: String,
+        time: String
+    ) {
+        val currentUser = auth.currentUser ?: return
         viewModelScope.launch {
-            saleDao.deleteSaleById(id)
+            val sale = SaleEntity(
+                id = id,
+                uid = currentUser.uid,
+                customerName = customerName,
+                productNumber = productNumber,
+                price = price,
+                quantity = quantity,
+                date = date,
+                time = time
+            )
+            saleDao.upsertSale(sale)
+        }
+    }
+
+    fun deleteSale(id: Int, reverseTransaction: Boolean = false) {
+        viewModelScope.launch {
+            if (reverseTransaction) {
+                // Hard delete: remove from record and financial calculations
+                saleDao.deleteSaleById(id)
+            } else {
+                // Soft delete: remove from record screen but keep in revenue
+                saleDao.softDeleteSaleById(id)
+            }
         }
     }
 

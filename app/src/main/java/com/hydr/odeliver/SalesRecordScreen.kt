@@ -35,7 +35,9 @@ fun SalesRecordScreen(
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var editingSale by remember { mutableStateOf<SaleUiModel?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var saleToDelete by remember { mutableStateOf<SaleUiModel?>(null) }
 
     Scaffold(
         topBar = {
@@ -59,10 +61,48 @@ fun SalesRecordScreen(
         },
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
-                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.HomeScreen.route) }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
-                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.Reports.route) }, icon = { Icon(Icons.Default.BarChart, null) }, label = { Text("Reports") })
-                NavigationBarItem(selected = true, onClick = { }, icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) }, label = { Text("Sales") })
-                NavigationBarItem(selected = false, onClick = { navController.navigate(Screen.Profile.route) }, icon = { Icon(Icons.Default.Person, null) }, label = { Text("Profile") })
+                NavigationBarItem(
+                    selected = false,
+                    onClick = {
+                        navController.navigate(Screen.HomeScreen.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Home, null) },
+                    label = { Text("Home") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = {
+                        navController.navigate(Screen.Reports.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.BarChart, null) },
+                    label = { Text("Reports") }
+                )
+                NavigationBarItem(
+                    selected = true,
+                    onClick = { },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
+                    label = { Text("Sales") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = {
+                        navController.navigate(Screen.Profile.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Person, null) },
+                    label = { Text("Profile") }
+                )
             }
         }
     ) { padding ->
@@ -80,25 +120,74 @@ fun SalesRecordScreen(
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 items(uiState.salesRecords) { sale ->
-                    SaleItem(sale = sale, onDelete = { viewModel.deleteSale(sale.id) })
+                    SaleItem(
+                        sale = sale,
+                        onEdit = { editingSale = sale },
+                        onDelete = { saleToDelete = sale }
+                    )
                 }
             }
         }
     }
 
     if (showAddDialog) {
-        AddSaleDialog(
+        SaleDialog(
             onDismiss = { showAddDialog = false },
-            onAdd = { customer, productNum, price, qty, date, time ->
+            onConfirm = { customer, productNum, price, qty, date, time ->
                 viewModel.addSale(customer, productNum, price, qty, date, time)
                 showAddDialog = false
+            }
+        )
+    }
+
+    if (editingSale != null) {
+        SaleDialog(
+            sale = editingSale,
+            onDismiss = { editingSale = null },
+            onConfirm = { customer, productNum, price, qty, date, time ->
+                editingSale?.let {
+                    viewModel.updateSale(it.id, customer, productNum, price, qty, date, time)
+                }
+                editingSale = null
+            }
+        )
+    }
+
+    if (saleToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { saleToDelete = null },
+            title = { Text("Delete Sale") },
+            text = { Text("How would you like to delete this sale?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        saleToDelete?.let { viewModel.deleteSale(it.id, reverseTransaction = true) }
+                        saleToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete & Reverse", color = Color.White)
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        saleToDelete?.let { viewModel.deleteSale(it.id, reverseTransaction = false) }
+                        saleToDelete = null
+                    }) {
+                        Text("Delete Record Only")
+                    }
+                    TextButton(onClick = { saleToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
             }
         )
     }
 }
 
 @Composable
-fun SaleItem(sale: SaleUiModel, onDelete: () -> Unit) {
+fun SaleItem(sale: SaleUiModel, onEdit: () -> Unit, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
@@ -119,148 +208,17 @@ fun SaleItem(sale: SaleUiModel, onDelete: () -> Unit) {
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(text = sale.price.formatCurrency(), fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddSaleDialog(onDismiss: () -> Unit, onAdd: (String, String, Double, String, String, String) -> Unit) {
-    var customerName by remember { mutableStateOf("") }
-    var productNumber by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
-    var quantityType by remember { mutableStateOf("one") }
-    var specificQuantity by remember { mutableStateOf("") }
-    var isPricePerItem by remember { mutableStateOf(false) }
-    
-    val sdfDate = remember { SimpleDateFormat("ddMMyyyy", Locale.getDefault()) }
-    val sdfTime = remember { SimpleDateFormat("HHmm", Locale.getDefault()) }
-    
-    val currentDay = remember { sdfDate.format(Date()) }
-    val currentTime = remember { sdfTime.format(Date()) }
-    
-    var date by remember { mutableStateOf("") }
-    var time by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add New Sale") },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedTextField(value = customerName, onValueChange = { customerName = it }, label = { Text("Customer Name") }, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                OutlinedTextField(value = productNumber, onValueChange = { productNumber = it }, label = { Text("Product Name") }, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = if (isPricePerItem) "Price Each" else "Total Price",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            MoneySegmentedInput(
-                                value = price,
-                                onValueChange = { price = it }
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Per Item", style = MaterialTheme.typography.labelSmall)
-                            Checkbox(checked = isPricePerItem, onCheckedChange = { isPricePerItem = it })
-                        }
-                    }
-                }
-
-                if (isPricePerItem) {
-                    val qtyValue = when (quantityType) {
-                        "one" -> 1.0
-                        "bulk" -> 1.0
-                        "specific" -> specificQuantity.toDoubleOrNull() ?: 1.0
-                        else -> 1.0
-                    }
-                    val total = (price.toDoubleOrNull() ?: 0.0) * qtyValue
-                    Text(
-                        text = "Total: ${total.formatCurrency()}",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                Text("Quantity Type", style = MaterialTheme.typography.labelMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("one", "bulk", "specific").forEach { qty ->
-                        FilterChip(
-                            selected = quantityType == qty,
-                            onClick = { quantityType = qty },
-                            label = { Text(qty) }
-                        )
-                    }
-                }
-
-                if (quantityType == "specific") {
-                    OutlinedTextField(
-                        value = specificQuantity,
-                        onValueChange = { specificQuantity = it },
-                        label = { Text("Enter Quantity") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                    )
-                }
-                
-                Column {
-                    Text("Date (DD/MM/YYYY)", style = MaterialTheme.typography.labelSmall)
-                    SegmentedInputField(
-                        value = date,
-                        onValueChange = { if (it.length <= 8) date = it },
-                        length = 8,
-                        mask = "##/##/####",
-                        placeholder = currentDay
-                    )
-                }
-
-                Column {
-                    Text("Time (HH:MM)", style = MaterialTheme.typography.labelSmall)
-                    SegmentedInputField(
-                        value = time,
-                        onValueChange = { if (it.length <= 4) time = it },
-                        length = 4,
-                        mask = "##:##",
-                        placeholder = currentTime
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                val qtyValue = when (quantityType) {
-                    "one" -> 1.0
-                    "bulk" -> 1.0 // Or whatever bulk represents, assuming 1 for total
-                    "specific" -> specificQuantity.toDoubleOrNull() ?: 1.0
-                    else -> 1.0
-                }
-                val rawPrice = price.toDoubleOrNull() ?: 0.0
-                val finalPrice = if (isPricePerItem) rawPrice * qtyValue else rawPrice
-                
-                val finalQuantity = if (quantityType == "specific") specificQuantity else quantityType
-                val finalDate = date.ifBlank { currentDay }
-                val finalTime = time.ifBlank { currentTime }
-                onAdd(customerName, productNumber, finalPrice, finalQuantity, finalDate, finalTime)
-            }) {
-                Text("Add", color = Color.Black)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}

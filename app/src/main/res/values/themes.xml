@@ -3,9 +3,17 @@
 
     <style name="Theme.Odeliver" parent="android:Theme.Material.Light.NoActionBar" />
 
+    <style name="Theme.Odeliver.Dark" parent="android:Theme.Material.NoActionBar" />
+
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_background</item>
         <item name="postSplashScreenTheme">@style/Theme.Odeliver</item>
+    </style>
+
+    <style name="Theme.App.Starting.Dark" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.Odeliver.Dark</item>
     </style>
 </resources>

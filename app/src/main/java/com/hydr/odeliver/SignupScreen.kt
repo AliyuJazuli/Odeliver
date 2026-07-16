@@ -303,7 +303,7 @@ fun SignupScreen(
                     modifier = Modifier.padding(start = 35.dp, top = 30.dp).size(364.dp, 67.dp),
                     shape = RoundedCornerShape(10.dp),
                     elevation = ButtonDefaults.buttonElevation(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = if (darkTheme) MaterialTheme.colorScheme.onPrimary else Color.Black)
                 ) {
                     Text(text = if (usePhone) { if (!otpSent) "Send OTP" else "Verify OTP" } else { "Sign up" }, fontWeight = FontWeight.Bold, fontSize = 21.sp)
                 }

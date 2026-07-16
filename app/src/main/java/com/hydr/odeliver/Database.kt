@@ -81,7 +81,8 @@ data class SaleEntity(
     val price: Double,
     val quantity: String, // "one", "bulk", or specific amount
     val date: String,
-    val time: String
+    val time: String,
+    val isSoftDeleted: Boolean = false
 )
 
 @Dao
@@ -116,17 +117,23 @@ interface DeliveryDao {
 
 @Dao
 interface SaleDao {
+    @Query("SELECT * FROM sales WHERE uid = :uid AND isSoftDeleted = 0 ORDER BY timestamp DESC")
+    fun getActiveSalesByUser(uid: String): Flow<List<SaleEntity>>
+
     @Query("SELECT * FROM sales WHERE uid = :uid ORDER BY timestamp DESC")
-    fun getSalesByUser(uid: String): Flow<List<SaleEntity>>
+    fun getAllSalesByUser(uid: String): Flow<List<SaleEntity>>
 
     @Upsert
     suspend fun upsertSale(sale: SaleEntity)
 
     @Query("DELETE FROM sales WHERE id = :id")
     suspend fun deleteSaleById(id: Int)
+
+    @Query("UPDATE sales SET isSoftDeleted = 1 WHERE id = :id")
+    suspend fun softDeleteSaleById(id: Int)
 }
 
-@Database(entities = [UserEntity::class, DeliveryEntity::class, SaleEntity::class], version = 9, exportSchema = false)
+@Database(entities = [UserEntity::class, DeliveryEntity::class, SaleEntity::class], version = 10, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
