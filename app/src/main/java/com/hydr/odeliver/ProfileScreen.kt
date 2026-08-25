@@ -81,6 +81,9 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor =  MaterialTheme.colorScheme.background
+                ),
                 title = { Text("Profile", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -90,7 +93,7 @@ fun ProfileScreen(
                 actions = {
                     if (!isEditMode && user != null) {
                         IconButton(onClick = { isEditMode = true }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Profile", tint = if (darkTheme) Color.White else Color.Black)
                         }
                     }
                     IconButton(onClick = onThemeToggle) {
@@ -103,7 +106,7 @@ fun ProfileScreen(
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 8.dp, contentColor = Color.Black,) {
                 NavigationBarItem(
                     selected = false,
                     onClick = {
@@ -113,8 +116,19 @@ fun ProfileScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.Home, null) },
-                    label = { Text("Home") }
+                    icon = { Icon(Icons.Default.Home, null, ) },
+                    label = { Text("Home", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
+
+
                 )
                 NavigationBarItem(
                     selected = false,
@@ -125,8 +139,17 @@ fun ProfileScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.BarChart, null) },
-                    label = { Text("Reports") }
+                    icon = { Icon(Icons.Default.BarChart, null,) },
+                    label = { Text("Reports", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
                 NavigationBarItem(
                     selected = false,
@@ -137,14 +160,38 @@ fun ProfileScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
-                    label = { Text("Sales") }
+                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null, ) },
+                    label = { Text("Sales",) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
                 NavigationBarItem(
                     selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.Default.Person, null) },
-                    label = { Text("Profile") }
+                    onClick = {
+                        navController.navigate(Screen.Profile.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Person, null, ) },
+                    label = { Text("Profile", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
             }
         }

@@ -34,6 +34,7 @@ import com.hydr.odeliver.ui.utils.formatCurrency
 import com.hydr.odeliver.ui.utils.formatDisplayDate
 import com.hydr.odeliver.ui.utils.formatDisplayTime
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -55,6 +56,8 @@ fun HomeScreen(
     var selectedDelivery by remember { mutableStateOf<DeliveryUiModel?>(null) }
     val sheetState = rememberModalBottomSheetState()
     var showAddSaleDialog by remember { mutableStateOf(false) }
+    var showNotifications by remember { mutableStateOf(false) }
+    val notificationSheetState = rememberModalBottomSheetState()
 
     if (showAddSaleDialog) {
         AddSaleDialog(
@@ -164,6 +167,12 @@ fun HomeScreen(
             confirmButton = { Button(onClick = { showReportDialog = false }) { Text("Close", color = Color.Black) } }
         )
     }
+    val listState = rememberLazyListState()
+    val isExpanded by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -191,11 +200,25 @@ fun HomeScreen(
                     IconButton(onClick = onThemeToggle) {
                         Icon(imageVector = if (darkTheme) Icons.Outlined.LightMode else Icons.Outlined.DarkMode, contentDescription = "Theme")
                     }
-                    BadgedBox(badge = { Badge { Text("3") } }, modifier = Modifier.padding(end = 16.dp)) {
-                        Icon(Icons.Outlined.Notifications, contentDescription = "Notifications")
+                    IconButton(onClick = { showNotifications = true }) {
+                        BadgedBox(
+                            badge = {
+                                if (uiState.notifications.isNotEmpty()) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = Color.White
+                                    ) {
+                                        Text(uiState.notifications.size.toString())
+                                    }
+                                }
+                            },
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Icon(Icons.Outlined.Notifications, contentDescription = "Notifications")
+                        }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor =  MaterialTheme.colorScheme.background)
             )
         },
         floatingActionButton = {
@@ -203,29 +226,37 @@ fun HomeScreen(
                 onClick = { showAddOptions = true },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text("Add New") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = if (darkTheme) MaterialTheme.colorScheme.onPrimary else Color.Black,
-                expanded = true
+                elevation = FloatingActionButtonDefaults.elevation(28.dp),
+                containerColor =if (darkTheme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+                contentColor = Color.White,
+                expanded = isExpanded
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 8.dp, contentColor = Color.Black,) {
                 NavigationBarItem(
-                    selected = currentRoute == Screen.HomeScreen.route,
-                    onClick = { 
-                        if (currentRoute != Screen.HomeScreen.route) {
-                            navController.navigate(Screen.HomeScreen.route) {
-                                popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+                    selected = true,
+                    onClick = {
+                        navController.navigate(Screen.HomeScreen.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.Home, null) },
-                    label = { Text("Home") }
+                    icon = { Icon(Icons.Default.Home, null, ) },
+                    label = { Text("Home", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
                 NavigationBarItem(
-                    selected = currentRoute == Screen.Reports.route,
+                    selected = false,
                     onClick = {
                         navController.navigate(Screen.Reports.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -233,11 +264,20 @@ fun HomeScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.BarChart, null) },
-                    label = { Text("Reports") }
+                    icon = { Icon(Icons.Default.BarChart, null,) },
+                    label = { Text("Reports", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
                 NavigationBarItem(
-                    selected = currentRoute == Screen.SalesRecord.route,
+                    selected = false,
                     onClick = {
                         navController.navigate(Screen.SalesRecord.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -245,11 +285,20 @@ fun HomeScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
-                    label = { Text("Sales") }
+                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null, ) },
+                    label = { Text("Sales", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
                 NavigationBarItem(
-                    selected = currentRoute == Screen.Profile.route,
+                    selected = false,
                     onClick = {
                         navController.navigate(Screen.Profile.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -257,13 +306,23 @@ fun HomeScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.Person, null) },
-                    label = { Text("Profile") }
+                    icon = { Icon(Icons.Default.Person, null, ) },
+                    label = { Text("Profile",) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
             }
         }
     ) { innerPadding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
         ) {
@@ -271,11 +330,12 @@ fun HomeScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     shape = RoundedCornerShape(28.dp),
+                    elevation = CardDefaults.elevatedCardElevation(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (darkTheme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(.3f)
+                        containerColor = if (darkTheme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary
                     )
                 ) {
-                    val contentColor = if (darkTheme) Color.White else Color.Black
+                    val contentColor =  Color.White
                     Column(modifier = Modifier.padding(24.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -308,7 +368,7 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(CircleShape)
-                                    .background(contentColor.copy(alpha = 0.2f)),
+                                    .background(contentColor.copy(alpha = 0.4f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Default.Storefront, null, tint = contentColor)
@@ -321,7 +381,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(contentColor.copy(alpha = 0.1f))
+                                .background(Color.White.copy(.2f))
                                 .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -367,8 +427,8 @@ fun HomeScreen(
             
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatCard(Modifier.weight(1f), "Net Balance", uiState.netSpent.formatCurrency(), Icons.Default.Scale, MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, onClick = { showReportDialog = true })
-                    StatCard(Modifier.weight(1f), "Total Expenses", uiState.spent.formatCurrency(), Icons.Default.Payments, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+                    StatCard(Modifier.weight(1f), "Net Balance", uiState.netSpent.formatCurrency(), Icons.Default.Scale, MaterialTheme.colorScheme.secondaryContainer, if (darkTheme)Color.White else Color.Black, onClick = { showReportDialog = true })
+                    StatCard(Modifier.weight(1f), "Total Expenses", uiState.spent.formatCurrency(), Icons.Default.Payments, MaterialTheme.colorScheme.inversePrimary, if (darkTheme)Color.White else Color.Black)
                 }
             }
             
@@ -376,15 +436,15 @@ fun HomeScreen(
             
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatCard(Modifier.weight(1f), "Sales Activity", "${uiState.sales} Recorded", Icons.AutoMirrored.Filled.TrendingUp, MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer, onClick = { navController.navigate(Screen.SalesRecord.route) })
-                    StatCard(Modifier.weight(1f), "All Orders", "${uiState.deliveries}", Icons.Default.LocalShipping, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, onClick = { navController.navigate(Screen.DeliveriesList.route) })
+                    StatCard(Modifier.weight(1f), "Sales Activity", "${uiState.sales} Recorded", Icons.AutoMirrored.Filled.TrendingUp, if (darkTheme) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSecondary, if (darkTheme)Color.White else Color.Black, onClick = { navController.navigate(Screen.SalesRecord.route) })
+                    StatCard(Modifier.weight(1f), "All Orders", "${uiState.deliveries}", Icons.Default.LocalShipping, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, contentColor = if (darkTheme)Color.White else Color.Black, onClick = { navController.navigate(Screen.DeliveriesList.route) })
                 }
             }
 
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text("Upcoming Deliveries", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.primary)
             }
 
             if (uiState.upcomingDeliveries.isEmpty()) {
@@ -406,13 +466,135 @@ fun HomeScreen(
                 DeliveryUpdateSheet(delivery = selectedDelivery!!, onUpdate = { s, l, o -> viewModel.updateDelivery(selectedDelivery!!, s, l, o); showBottomSheet = false }, onDelete = { id -> viewModel.deleteDelivery(id); showBottomSheet = false }, onDismiss = { showBottomSheet = false })
             }
         }
+
+        if (showNotifications) {
+            ModalBottomSheet(
+                onDismissRequest = { showNotifications = false },
+                sheetState = notificationSheetState,
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                NotificationSheet(
+                    notifications = uiState.notifications,
+                    onNotificationClick = { notification ->
+                        showNotifications = false
+                        when (notification.type) {
+                            NotificationType.WEEKLY_SUMMARY -> {
+                                navController.navigate(Screen.Reports.createRoute("WEEKLY"))
+                            }
+                            NotificationType.MONTHLY_SUMMARY -> {
+                                navController.navigate(Screen.Reports.createRoute("MONTHLY"))
+                            }
+                            NotificationType.DELIVERY_REMINDER -> {
+                                navController.navigate(Screen.DeliveriesList.route)
+                            }
+                        }
+                    },
+                    onDismiss = { showNotifications = false }
+                )
+            }
+        }
     }
+}
+
+@Composable
+fun NotificationSheet(
+    notifications: List<NotificationUiModel>,
+    onNotificationClick: (NotificationUiModel) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 32.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Notifications",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+
+        if (notifications.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No new notifications", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyColumn {
+                items(notifications) { notification ->
+                    NotificationItem(notification) {
+                        onNotificationClick(notification)
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NotificationItem(
+    notification: NotificationUiModel,
+    onClick: () -> Unit
+) {
+    val icon = when (notification.type) {
+        NotificationType.DELIVERY_REMINDER -> Icons.Default.LocalShipping
+        NotificationType.WEEKLY_SUMMARY -> Icons.Default.BarChart
+        NotificationType.MONTHLY_SUMMARY -> Icons.Default.PieChart
+    }
+    
+    val iconColor = when (notification.type) {
+        NotificationType.DELIVERY_REMINDER -> MaterialTheme.colorScheme.primary
+        NotificationType.WEEKLY_SUMMARY -> Color(0xFF4CAF50)
+        NotificationType.MONTHLY_SUMMARY -> Color(0xFF2196F3)
+    }
+
+    ListItem(
+        modifier = Modifier.clickable { onClick() },
+        headlineContent = {
+            Text(notification.title, fontWeight = FontWeight.Bold)
+        },
+        supportingContent = {
+            Text(notification.message)
+        },
+        leadingContent = {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(iconColor.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
 }
 
 @Composable
 fun StatCard(modifier: Modifier, label: String, value: String, icon: ImageVector, containerColor: Color, contentColor: Color, onClick: () -> Unit = {} ) {
     Card(
         modifier = modifier.height(100.dp).clickable { onClick() },
+        elevation = CardDefaults.elevatedCardElevation(20.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor, contentColor =  contentColor)
     ) {

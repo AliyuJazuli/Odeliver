@@ -3,6 +3,7 @@ package com.hydr.odeliver
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -32,16 +33,28 @@ import java.util.*
 @Composable
 fun SalesRecordScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = viewModel(),
+    darkTheme: Boolean,
+    onThemeToggle: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var editingSale by remember { mutableStateOf<SaleUiModel?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var saleToDelete by remember { mutableStateOf<SaleUiModel?>(null) }
 
+    val listState = rememberLazyListState()
+    val isExpanded by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
                 title = { Text("Sales Records", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -51,16 +64,18 @@ fun SalesRecordScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor =  Color.Black
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Sale")
-            }
+                containerColor = if (darkTheme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+                contentColor =  Color.White,
+                expanded = isExpanded,
+                icon = {Icon(Icons.Default.Add, contentDescription = "Add Sale", tint = Color.White)},
+                text = {Text("Add Sales")}
+
+            )
         },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 8.dp, contentColor = Color.Black,) {
                 NavigationBarItem(
                     selected = false,
                     onClick = {
@@ -70,8 +85,19 @@ fun SalesRecordScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.Home, null) },
-                    label = { Text("Home") }
+                    icon = { Icon(Icons.Default.Home, null, ) },
+                    label = { Text("Home", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
+
+
                 )
                 NavigationBarItem(
                     selected = false,
@@ -82,14 +108,38 @@ fun SalesRecordScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.BarChart, null) },
-                    label = { Text("Reports") }
+                    icon = { Icon(Icons.Default.BarChart, null,) },
+                    label = { Text("Reports", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
                 NavigationBarItem(
                     selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
-                    label = { Text("Sales") }
+                    onClick = {
+                        navController.navigate(Screen.SalesRecord.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null, ) },
+                    label = { Text("Sales", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
                 NavigationBarItem(
                     selected = false,
@@ -100,8 +150,17 @@ fun SalesRecordScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.Person, null) },
-                    label = { Text("Profile") }
+                    icon = { Icon(Icons.Default.Person, null, ) },
+                    label = { Text("Profile",) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
             }
         }
@@ -112,6 +171,7 @@ fun SalesRecordScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)

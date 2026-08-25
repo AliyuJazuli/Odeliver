@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import androidx.compose.ui.graphics.Color
 import com.hydr.odeliver.ui.utils.toDisplayColor
 import com.hydr.odeliver.ui.utils.toDisplayText
+import java.util.UUID
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val auth = FirebaseAuth.getInstance()
@@ -174,7 +175,20 @@ data class DashboardUiState(
     val incomingCost: Double = 0.0,
     val upcomingDeliveries: List<DeliveryUiModel> = emptyList(),
     val allDeliveries: List<DeliveryUiModel> = emptyList(),
-    val salesRecords: List<SaleUiModel> = emptyList()
+    val salesRecords: List<SaleUiModel> = emptyList(),
+    val notifications: List<NotificationUiModel> = emptyList()
+)
+
+enum class NotificationType { DELIVERY_REMINDER, WEEKLY_SUMMARY, MONTHLY_SUMMARY }
+
+data class NotificationUiModel(
+    val id: String = UUID.randomUUID().toString(),
+    val title: String,
+    val message: String,
+    val type: NotificationType,
+    val timestamp: Long = System.currentTimeMillis(),
+    val isRead: Boolean = false,
+    val metadata: String? = null // e.g., "WEEKLY" or "MONTHLY"
 )
 
 data class DeliveryUiModel(
@@ -203,6 +217,7 @@ data class SaleUiModel(
     val date: String,
     val time: String
 )
+
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
@@ -305,6 +320,42 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
                 val pendingCount = deliveries.count { it.status != DeliveryStatus.DELIVERED && it.status != DeliveryStatus.CANCELLED }
                 
+                // Generate notifications
+                val newNotifications = mutableListOf<NotificationUiModel>()
+                
+                // Delivery Reminders for today
+                val sdf = java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.getDefault())
+                val todayStr = sdf.format(java.util.Date())
+                mappedDeliveries.filter { it.date == todayStr && it.statusEnum != DeliveryStatus.DELIVERED && it.statusEnum != DeliveryStatus.CANCELLED }
+                    .forEach { delivery ->
+                        newNotifications.add(
+                            NotificationUiModel(
+                                title = if (delivery.isOutgoing) "Outgoing Delivery Today" else "Incoming Delivery Today",
+                                message = "${delivery.itemName} ${if (delivery.isOutgoing) "to" else "from"} ${delivery.customerName} at ${delivery.time}",
+                                type = NotificationType.DELIVERY_REMINDER
+                            )
+                        )
+                    }
+                
+                // Summary notifications
+                newNotifications.add(
+                    NotificationUiModel(
+                        title = "Weekly Performance Summary",
+                        message = "Your weekly report is ready. Tap to view insights.",
+                        type = NotificationType.WEEKLY_SUMMARY,
+                        metadata = "WEEKLY"
+                    )
+                )
+                
+                newNotifications.add(
+                    NotificationUiModel(
+                        title = "Monthly Business Overview",
+                        message = "See how your shop performed this month.",
+                        type = NotificationType.MONTHLY_SUMMARY,
+                        metadata = "MONTHLY"
+                    )
+                )
+
                 _uiState.value.copy(
                     allDeliveries = mappedDeliveries,
                     upcomingDeliveries = mappedDeliveries.filter { 
@@ -317,7 +368,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     totalSalesAmount = totalRevenue,
                     incomingCost = incomingCost,
                     pendingDeliveriesCount = pendingCount,
-                    netSpent = totalRevenue - totalExpenses
+                    netSpent = totalRevenue - totalExpenses,
+                    notifications = newNotifications
                 )
             }.collectLatest { newState ->
                 _uiState.value = newState

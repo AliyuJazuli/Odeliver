@@ -34,11 +34,14 @@ enum class ReportPeriod { DAILY, WEEKLY, MONTHLY }
 @Composable
 fun ReportsScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = viewModel(),
+    darkTheme: Boolean,
+    onThemeToggle: () -> Unit,
+    initialPeriod: ReportPeriod = ReportPeriod.MONTHLY
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
-    var selectedPeriod by remember { mutableStateOf(ReportPeriod.MONTHLY) }
+    var selectedPeriod by remember { mutableStateOf(initialPeriod) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
     // Filtering Logic
@@ -62,6 +65,9 @@ fun ReportsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Business Insights", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor =  MaterialTheme.colorScheme.background
+                ),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -70,7 +76,7 @@ fun ReportsScreen(
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 8.dp, contentColor = Color.Black,) {
                 NavigationBarItem(
                     selected = false,
                     onClick = {
@@ -80,14 +86,40 @@ fun ReportsScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.Home, null) },
-                    label = { Text("Home") }
+                    icon = { Icon(Icons.Default.Home, null,) },
+                    label = { Text("Home",) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
+
+
                 )
                 NavigationBarItem(
                     selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.Default.BarChart, null) },
-                    label = { Text("Reports") }
+                    onClick = {
+                        navController.navigate(Screen.Reports.route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.BarChart, null,) },
+                    label = { Text("Reports",) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
                 NavigationBarItem(
                     selected = false,
@@ -98,8 +130,17 @@ fun ReportsScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
-                    label = { Text("Sales") }
+                    icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null, ) },
+                    label = { Text("Sales",) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
                 NavigationBarItem(
                     selected = false,
@@ -110,8 +151,17 @@ fun ReportsScreen(
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.Person, null) },
-                    label = { Text("Profile") }
+                    icon = { Icon(Icons.Default.Person, null, ) },
+                    label = { Text("Profile", ) },
+                    colors = NavigationBarItemColors(
+                        selectedIconColor = if (darkTheme) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.tertiary,
+                        unselectedIconColor = if (darkTheme) Color.White else Color.Black,
+                        selectedTextColor = MaterialTheme.colorScheme.tertiary,
+                        unselectedTextColor = if (darkTheme) Color.White else Color.Black,
+                        selectedIndicatorColor = MaterialTheme.colorScheme.onSecondary,
+                        disabledIconColor = MaterialTheme.colorScheme.background,
+                        disabledTextColor = MaterialTheme.colorScheme.background,
+                    )
                 )
             }
         }

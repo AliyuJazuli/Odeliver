@@ -1,6 +1,7 @@
 package com.hydr.odeliver
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -93,8 +94,9 @@ fun AddDeliveryScreen(
                 },
                 icon = { Icon(Icons.Default.Save, contentDescription = null) },
                 text = { Text("Save Delivery") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = if (darkTheme) MaterialTheme.colorScheme.onPrimary else Color.Black
+                containerColor = if (darkTheme) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+                contentColor =  Color.White,
+
             )
         }
     ) { innerPadding ->

@@ -152,12 +152,32 @@ fun MainScreen(
           }
           composable(Screen.SalesRecord.route) {
               val viewModel: HomeViewModel = viewModel()
-              SalesRecordScreen(navController, viewModel)
+              SalesRecordScreen(navController, darkTheme = darkTheme, onThemeToggle = onThemeToggle, viewModel = viewModel)
           }
 
-          composable(Screen.Reports.route) {
+          composable(
+              route = "reports?period={period}",
+              arguments = listOf(
+                  androidx.navigation.navArgument("period") {
+                      type = androidx.navigation.NavType.StringType
+                      nullable = true
+                  }
+              )
+          ) { backStackEntry ->
+              val periodStr = backStackEntry.arguments?.getString("period")
+              val initialPeriod = when (periodStr) {
+                  "WEEKLY" -> ReportPeriod.WEEKLY
+                  "DAILY" -> ReportPeriod.DAILY
+                  else -> ReportPeriod.MONTHLY
+              }
               val viewModel: HomeViewModel = viewModel()
-              ReportsScreen(navController, viewModel)
+              ReportsScreen(
+                  navController,
+                  darkTheme = darkTheme,
+                  onThemeToggle = onThemeToggle,
+                  viewModel = viewModel,
+                  initialPeriod = initialPeriod
+              )
           }
 
       }
