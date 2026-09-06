@@ -10,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -20,13 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,44 +32,91 @@ fun ProfileScreen(
     navController: NavController,
     darkTheme: Boolean,
     onThemeToggle: () -> Unit,
-    viewModel: AuthViewModel
+    viewModel: HomeViewModel
 ) {
-    val auth = FirebaseAuth.getInstance()
-    val user = auth.currentUser
     val scrollState = rememberScrollState()
 
     val name by viewModel.name.collectAsState()
     val shopName by viewModel.shopName.collectAsState()
     val email by viewModel.email.collectAsState()
+    val phoneNumber by viewModel.phoneNumber.collectAsState()
     val address by viewModel.address.collectAsState()
     val bio by viewModel.bio.collectAsState()
 
     var isEditMode by remember { mutableStateOf(false) }
-    var showGuestDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
+    var showDeleteSalesDialog by remember { mutableStateOf(false) }
+    var showDeleteDeliveriesDialog by remember { mutableStateOf(false) }
 
-    if (showGuestDialog) {
+    if (showDeleteAccountDialog) {
         AlertDialog(
-            onDismissRequest = { showGuestDialog = false },
-            title = { Text("Save Profile") },
-            text = { Text("Please sign up or login to save your profile.") },
+            onDismissRequest = { showDeleteAccountDialog = false },
+            title = { Text("Reset Account") },
+            text = { Text("This will permanently delete ALL data, including your profile, sales, and deliveries. This action cannot be undone.") },
             confirmButton = {
-                TextButton(onClick = {
-                    showGuestDialog = false
-                    navController.navigate(Screen.SignupScreen.route) {
-                         popUpTo(0) { inclusive = true }
-                    }
-                }) {
-                    Text("Sign Up")
+                Button(
+                    onClick = {
+                        viewModel.deleteAccount {
+                            showDeleteAccountDialog = false
+                            isEditMode = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete Everything", color = Color.White)
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showGuestDialog = false
-                    navController.navigate(Screen.LoginScreen.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }) {
-                    Text("Login")
+                TextButton(onClick = { showDeleteAccountDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDeleteSalesDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteSalesDialog = false },
+            title = { Text("Clear Sales") },
+            text = { Text("Delete all sales records permanently?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearAllSales()
+                        showDeleteSalesDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Clear All Sales", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteSalesDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDeleteDeliveriesDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDeliveriesDialog = false },
+            title = { Text("Clear Deliveries") },
+            text = { Text("Delete all delivery records permanently?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearAllDeliveries()
+                        showDeleteDeliveriesDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Clear All Deliveries", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDeliveriesDialog = false }) {
+                    Text("Cancel")
                 }
             }
         )
@@ -91,7 +135,7 @@ fun ProfileScreen(
                     }
                 },
                 actions = {
-                    if (!isEditMode && user != null) {
+                    if (!isEditMode) {
                         IconButton(onClick = { isEditMode = true }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit Profile", tint = if (darkTheme) Color.White else Color.Black)
                         }
@@ -201,7 +245,8 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(scrollState)
-                .padding(16.dp),
+                .padding(16.dp)
+                .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -241,7 +286,8 @@ fun ProfileScreen(
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                InfoCard(icon = Icons.Default.Email, label = "Email", value = user?.email ?: email)
+                InfoCard(icon = Icons.Default.Email, label = "Email", value = email)
+                InfoCard(icon = Icons.Default.Phone, label = "Phone", value = phoneNumber)
                 InfoCard(icon = Icons.Default.LocationOn, label = "Address", value = address)
                 InfoCard(icon = Icons.Default.Info, label = "Bio", value = bio)
                 
@@ -270,12 +316,22 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 ProfileTextField(
-                    value = user?.email ?: email,
-                    onValueChange = { },
+                    value = email,
+                    onValueChange = { viewModel.onEmailChange(it) },
                     placeholder = "Email Address",
                     icon = Icons.Default.Email,
-                    enabled = false,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    darkTheme = darkTheme
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ProfileTextField(
+                    value = phoneNumber,
+                    onValueChange = { viewModel.onPhoneNumberChange(it) },
+                    placeholder = "Phone Number",
+                    icon = Icons.Default.Phone,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     darkTheme = darkTheme
                 )
 
@@ -308,12 +364,8 @@ fun ProfileScreen(
             if (isEditMode) {
                 Button(
                     onClick = { 
-                       if (user == null) {
-                           showGuestDialog = true
-                       } else {
-                           viewModel.saveUserToRoom {
-                               isEditMode = false
-                           }
+                       viewModel.saveUser {
+                           isEditMode = false
                        }
                     },
                     modifier = Modifier
@@ -325,21 +377,68 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            TextButton(
-                onClick = {
-                    auth.signOut()
-                    navController.navigate(Screen.Onboarding.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
-                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Sign Out")
+            if (!isEditMode) {
+                Spacer(modifier = Modifier.height(32.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = "Data Management",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.error
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                ManagementItem(
+                    label = "Clear All Sales",
+                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    onClick = { showDeleteSalesDialog = true }
+                )
+                
+                ManagementItem(
+                    label = "Clear All Deliveries",
+                    icon = Icons.Default.LocalShipping,
+                    onClick = { showDeleteDeliveriesDialog = true }
+                )
+                
+                ManagementItem(
+                    label = "Reset Account",
+                    icon = Icons.Default.DeleteForever,
+                    color = MaterialTheme.colorScheme.error,
+                    onClick = { showDeleteAccountDialog = true }
+                )
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun ManagementItem(
+    label: String,
+    icon: ImageVector,
+    color: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = color)
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = color)
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = color.copy(alpha = 0.5f))
         }
     }
 }

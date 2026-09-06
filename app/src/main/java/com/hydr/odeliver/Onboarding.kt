@@ -1,6 +1,5 @@
 package com.hydr.odeliver
 
-import android.R.attr.contentDescription
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -53,7 +52,8 @@ import com.hydr.odeliver.ui.theme.OdeliverTheme
 fun OnboardingScreen(
     navController: NavController,
     darkTheme: Boolean,
-    onThemeToggle: () -> Unit
+    onThemeToggle: () -> Unit,
+    viewModel: HomeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
 
         Surface(
@@ -152,8 +152,11 @@ fun OnboardingScreen(
 
                 Button(
                     onClick = {
-                        navController.navigate(Screen.SignupScreen.route){
-                            popUpTo(Screen.Onboarding.route)
+                        viewModel.completeOnboarding()
+                        navController.navigate(Screen.SetProfileScreen.route) {
+                            popUpTo(Screen.Onboarding.route) {
+                                inclusive = true
+                            }
                         }
                     },
                     modifier = Modifier
@@ -164,53 +167,10 @@ fun OnboardingScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onPrimary)
                 ) {
                     Text(
-                        text = "Create account",
+                        text = "Start recording",
                         fontWeight = FontWeight.Bold,
                         fontSize = 19.sp,
                         color = MaterialTheme.colorScheme.outline
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        navController.navigate(Screen.LoginScreen.route){
-
-                        }
-                    },
-                    modifier = Modifier
-                        .padding(top = 25.dp)
-                        .size(314.dp, 59.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color(0xFFD9E1E2)
-                    ),
-                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.onPrimary),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 10.dp)
-                ) {
-                    Text(
-                        text = "Already have an account",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 19.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                TextButton(
-                    onClick = {
-                        navController.navigate(Screen.HomeScreen.route) {
-                            popUpTo(Screen.Onboarding.route) {
-                                inclusive = true
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .padding(top = 20.dp, bottom = 0.dp)
-                ) {
-                    Text(
-                        text = "Continue as guest?",
-                        fontSize = 19.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
                     )
                 }
             }

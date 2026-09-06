@@ -44,7 +44,8 @@ data class UserEntity(
     val shopName: String = "",
     val address: String = "",
     val bio: String = "",
-    val budget: Double = 0.0
+    val budget: Double = 0.0,
+    val isOnboardingCompleted: Boolean = false
 )
 
 @Entity(
@@ -102,6 +103,9 @@ interface DeliveryDao {
     @Query("SELECT * FROM deliveries WHERE uid = :uid ORDER BY timestamp DESC")
     fun getDeliveriesByUser(uid: String): Flow<List<DeliveryEntity>>
 
+    @Query("SELECT * FROM deliveries WHERE date = :date")
+    suspend fun getDeliveriesByDate(date: String): List<DeliveryEntity>
+
     @Query("SELECT * FROM deliveries ORDER BY timestamp DESC")
     fun getAllDeliveries(): Flow<List<DeliveryEntity>>
 
@@ -131,9 +135,12 @@ interface SaleDao {
 
     @Query("UPDATE sales SET isSoftDeleted = 1 WHERE id = :id")
     suspend fun softDeleteSaleById(id: Int)
+
+    @Query("DELETE FROM sales")
+    suspend fun clearAllSales()
 }
 
-@Database(entities = [UserEntity::class, DeliveryEntity::class, SaleEntity::class], version = 10, exportSchema = false)
+@Database(entities = [UserEntity::class, DeliveryEntity::class, SaleEntity::class], version = 11, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
@@ -151,7 +158,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "odeliver_database"
                 )
-                    .fallbackToDestructiveMigration() // For development simplicity
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

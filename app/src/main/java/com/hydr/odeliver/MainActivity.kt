@@ -1,9 +1,14 @@
 package com.hydr.odeliver
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,13 +38,33 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.hydr.odeliver.ui.theme.DarkColorScheme
 import com.hydr.odeliver.ui.theme.LightColorScheme
-import com.google.firebase.auth.FirebaseAuth
 
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
+import androidx.room.util.convertUUIDToByte
 
 class MainActivity : ComponentActivity() {
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        // Handle permission result if needed
+    }
+
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+
         val themeManager = ThemeManager(this)
         val isDark = themeManager.isDarkTheme()
         
@@ -53,6 +78,8 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        askNotificationPermission()
         
         setContent {
             val themeManagerInner = remember { themeManager }
@@ -76,51 +103,27 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen(
-     modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,
     darkTheme: Boolean,
     onThemeToggle: () -> Unit,
-
+    viewModel: HomeViewModel = viewModel()
 ) {
     val navController = rememberNavController()
-    val currentUser = FirebaseAuth.getInstance().currentUser
-    val startDest = if (currentUser != null) Screen.HomeScreen.route else Screen.Onboarding.route
+    val uiState by viewModel.uiState.collectAsState()
+    
+    // Determine start destination based on onboarding and profile completion
+    val startDest = when {
+        !uiState.isOnboardingCompleted -> Screen.Onboarding.route
+        !uiState.isProfileComplete -> Screen.SetProfileScreen.route
+        else -> Screen.HomeScreen.route
+    }
 
     NavHost(
       navController = navController, startDestination = startDest, builder = {
           composable(Screen.Onboarding.route) {
-              OnboardingScreen( navController, darkTheme, onThemeToggle)
-          }
-          composable(Screen.LoginScreen.route) {
-              val viewModel: AuthViewModel = viewModel()
-
-              LoginScreen(
-                  navController,
-                  darkTheme,
-                  onThemeToggle,
-                  viewModel = viewModel
-              )
-          }
-          composable(Screen.SignupScreen.route) {
-              val viewModel: AuthViewModel = viewModel()
-
-              SignupScreen(
-                  navController,
-                  darkTheme,
-                  onThemeToggle,
-                  viewModel = viewModel
-              )
-          }
-          composable(Screen.ForgetPassword.route) {
-              val viewModel: AuthViewModel = viewModel()
-              ForgetPassword(
-                  navController,
-                  darkTheme,
-                  onThemeToggle,
-                  viewModel = viewModel
-              )
+              OnboardingScreen(navController, darkTheme, onThemeToggle, viewModel)
           }
           composable(Screen.HomeScreen.route) {
-              val viewModel : HomeViewModel = viewModel()
               HomeScreen(
                   navController,
                   darkTheme,
@@ -129,7 +132,6 @@ fun MainScreen(
               )
           }
           composable(Screen.Profile.route) {
-            val viewModel : AuthViewModel = viewModel()
             ProfileScreen(
                 navController,
                 darkTheme,
@@ -138,7 +140,6 @@ fun MainScreen(
                 )
             }
           composable(Screen.AddDelivery.route) {
-              val viewModel: HomeViewModel = viewModel()
               AddDeliveryScreen(
                   navController,
                   darkTheme,
@@ -147,12 +148,18 @@ fun MainScreen(
               )
           }
           composable(Screen.DeliveriesList.route) {
-              val viewModel: HomeViewModel = viewModel()
               DeliveriesListScreen(navController, viewModel)
           }
           composable(Screen.SalesRecord.route) {
-              val viewModel: HomeViewModel = viewModel()
               SalesRecordScreen(navController, darkTheme = darkTheme, onThemeToggle = onThemeToggle, viewModel = viewModel)
+          }
+          composable(Screen.SetProfileScreen.route){
+              SetProfileScreen(
+                  navController,
+                  darkTheme,
+                  onThemeToggle,
+                  viewModel
+              )
           }
 
           composable(
@@ -170,7 +177,6 @@ fun MainScreen(
                   "DAILY" -> ReportPeriod.DAILY
                   else -> ReportPeriod.MONTHLY
               }
-              val viewModel: HomeViewModel = viewModel()
               ReportsScreen(
                   navController,
                   darkTheme = darkTheme,
@@ -178,6 +184,7 @@ fun MainScreen(
                   viewModel = viewModel,
                   initialPeriod = initialPeriod
               )
+
           }
 
       }

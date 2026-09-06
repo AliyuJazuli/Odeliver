@@ -349,6 +349,11 @@ fun HomeScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = contentColor
                                 )
+                                Text(
+                                    text = "Owner: ${uiState.name}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = contentColor.copy(alpha = 0.9f)
+                                )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         Icons.Default.LocationOn,

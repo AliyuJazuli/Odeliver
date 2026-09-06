@@ -3,10 +3,8 @@ import org.gradle.kotlin.dsl.implementation
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.services)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-
 }
 
 android {
@@ -50,8 +48,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.compose.material3.window.size)
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.firebase.auth)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,8 +58,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
     implementation(libs.androidx.core.splashscreen)
 
 
@@ -69,20 +65,6 @@ dependencies {
 
 
     implementation(libs.androidx.navigation.compose)
-
-    implementation("com.firebaseui:firebase-ui-auth:9.0.0")
-
-    implementation(libs.facebook.android.sdk)
-
-
-    implementation(platform("com.google.firebase:firebase-bom:34.14.0"))
-
-
-    implementation("com.google.firebase:firebase-auth")
-
-    implementation("androidx.credentials:credentials:1.3.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
@@ -92,4 +74,8 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+    implementation(libs.errorprone.annotations)
 }
