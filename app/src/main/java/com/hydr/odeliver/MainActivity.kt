@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.layout.Arrangement
@@ -44,8 +45,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import androidx.room.util.convertUUIDToByte
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: HomeViewModel by viewModels()
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -75,7 +80,12 @@ class MainActivity : ComponentActivity() {
             setTheme(R.style.Theme_App_Starting)
         }
 
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
+        
+        splashScreen.setKeepOnScreenCondition {
+            !viewModel.navigationState.value.isInitialized
+        }
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
@@ -92,7 +102,8 @@ class MainActivity : ComponentActivity() {
                         val newTheme = !darkTheme
                         darkTheme = newTheme
                         themeManagerInner.setDarkTheme(newTheme)
-                    }
+                    },
+                    viewModel = viewModel
                 )
             }
         }
@@ -109,84 +120,87 @@ fun MainScreen(
     viewModel: HomeViewModel = viewModel()
 ) {
     val navController = rememberNavController()
-    val uiState by viewModel.uiState.collectAsState()
+    val navState by viewModel.navigationState.collectAsState()
+
+    if (!navState.isInitialized) {
+        return
+    }
     
-    // Determine start destination based on onboarding and profile completion
     val startDest = when {
-        !uiState.isOnboardingCompleted -> Screen.Onboarding.route
-        !uiState.isProfileComplete -> Screen.SetProfileScreen.route
+        !navState.isOnboardingCompleted -> Screen.Onboarding.route
+        !navState.isProfileComplete -> Screen.SetProfileScreen.route
         else -> Screen.HomeScreen.route
     }
 
     NavHost(
-      navController = navController, startDestination = startDest, builder = {
-          composable(Screen.Onboarding.route) {
-              OnboardingScreen(navController, darkTheme, onThemeToggle, viewModel)
-          }
-          composable(Screen.HomeScreen.route) {
-              HomeScreen(
-                  navController,
-                  darkTheme,
-                  onThemeToggle,
-                  viewModel = viewModel
-              )
-          }
-          composable(Screen.Profile.route) {
-            ProfileScreen(
-                navController,
-                darkTheme,
-                onThemeToggle,
-                viewModel = viewModel
+        navController = navController, startDestination = startDest, builder = {
+            composable(Screen.Onboarding.route) {
+                OnboardingScreen(navController, darkTheme, onThemeToggle, viewModel)
+            }
+            composable(Screen.HomeScreen.route) {
+                HomeScreen(
+                    navController,
+                    darkTheme,
+                    onThemeToggle,
+                    viewModel = viewModel
                 )
             }
-          composable(Screen.AddDelivery.route) {
-              AddDeliveryScreen(
-                  navController,
-                  darkTheme,
-                  onThemeToggle,
-                  viewModel
-              )
-          }
-          composable(Screen.DeliveriesList.route) {
-              DeliveriesListScreen(navController, viewModel)
-          }
-          composable(Screen.SalesRecord.route) {
-              SalesRecordScreen(navController, darkTheme = darkTheme, onThemeToggle = onThemeToggle, viewModel = viewModel)
-          }
-          composable(Screen.SetProfileScreen.route){
-              SetProfileScreen(
-                  navController,
-                  darkTheme,
-                  onThemeToggle,
-                  viewModel
-              )
-          }
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    navController,
+                    darkTheme,
+                    onThemeToggle,
+                    viewModel = viewModel
+                )
+            }
+            composable(Screen.AddDelivery.route) {
+                AddDeliveryScreen(
+                    navController,
+                    darkTheme,
+                    onThemeToggle,
+                    viewModel
+                )
+            }
+            composable(Screen.DeliveriesList.route) {
+                DeliveriesListScreen(navController, viewModel)
+            }
+            composable(Screen.SalesRecord.route) {
+                SalesRecordScreen(navController, darkTheme = darkTheme, onThemeToggle = onThemeToggle, viewModel = viewModel)
+            }
+            composable(Screen.SetProfileScreen.route) {
+                SetProfileScreen(
+                    navController,
+                    darkTheme,
+                    onThemeToggle,
+                    viewModel
+                )
+            }
 
-          composable(
-              route = "reports?period={period}",
-              arguments = listOf(
-                  androidx.navigation.navArgument("period") {
-                      type = androidx.navigation.NavType.StringType
-                      nullable = true
-                  }
-              )
-          ) { backStackEntry ->
-              val periodStr = backStackEntry.arguments?.getString("period")
-              val initialPeriod = when (periodStr) {
-                  "WEEKLY" -> ReportPeriod.WEEKLY
-                  "DAILY" -> ReportPeriod.DAILY
-                  else -> ReportPeriod.MONTHLY
-              }
-              ReportsScreen(
-                  navController,
-                  darkTheme = darkTheme,
-                  onThemeToggle = onThemeToggle,
-                  viewModel = viewModel,
-                  initialPeriod = initialPeriod
-              )
+            composable(
+                route = "reports?period={period}",
+                arguments = listOf(
+                    navArgument("period") {
+                        type = NavType.StringType
+                        nullable = true
+                    }
+                )
+            ) { backStackEntry ->
+                val periodStr = backStackEntry.arguments?.getString("period")
+                val initialPeriod = when (periodStr) {
+                    "WEEKLY" -> ReportPeriod.WEEKLY
+                    "DAILY" -> ReportPeriod.DAILY
+                    else -> ReportPeriod.MONTHLY
+                }
+                ReportsScreen(
+                    navController,
+                    darkTheme = darkTheme,
+                    onThemeToggle = onThemeToggle,
+                    viewModel = viewModel,
+                    initialPeriod = initialPeriod
+                )
 
-          }
+            }
 
-      }
-  )
+        }
+    )
 }

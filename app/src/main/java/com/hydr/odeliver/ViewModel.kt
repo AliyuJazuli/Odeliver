@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -13,12 +12,24 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.graphics.Color
 import com.hydr.odeliver.ui.utils.toDisplayColor
 import com.hydr.odeliver.ui.utils.toDisplayText
+import dagger.hilt.android.lifecycle.HiltViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import javax.inject.Inject
 import java.util.UUID
 
 const val DEFAULT_USER_ID = "default_user"
+
+data class NavigationUiState(
+    val isProfileComplete: Boolean = false,
+    val isOnboardingCompleted: Boolean = false,
+    val isInitialized: Boolean = false
+)
 
 data class DashboardUiState(
     val name: String = "",
@@ -38,9 +49,7 @@ data class DashboardUiState(
     val upcomingDeliveries: List<DeliveryUiModel> = emptyList(),
     val allDeliveries: List<DeliveryUiModel> = emptyList(),
     val salesRecords: List<SaleUiModel> = emptyList(),
-    val notifications: List<NotificationUiModel> = emptyList(),
-    val isProfileComplete: Boolean = false,
-    val isOnboardingCompleted: Boolean = false
+    val notifications: List<NotificationUiModel> = emptyList()
 )
 
 enum class NotificationType { DELIVERY_REMINDER, WEEKLY_SUMMARY, MONTHLY_SUMMARY }
@@ -109,25 +118,25 @@ fun SaleEntity.toUiModel() = SaleUiModel(
     time = time
 )
 
-
-class HomeViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class HomeViewModel @Inject constructor(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
     private val deliveryDao = db.deliveryDao()
     private val userDao = db.userDao()
     private val saleDao = db.saleDao()
 
     // Base flows
-    private val _deliveries = deliveryDao.getDeliveriesByUser(DEFAULT_USER_ID)
-    private val _sales = saleDao.getAllSalesByUser(DEFAULT_USER_ID)
+    private val _deliveries = deliveryDao.getDeliveriesByUser(DEFAULT_USER_ID).distinctUntilChanged()
+    private val _sales = saleDao.getAllSalesByUser(DEFAULT_USER_ID).distinctUntilChanged()
 
     // Mapped UI models (Cached with stateIn)
     private val mappedDeliveries = _deliveries.map { deliveries ->
         deliveries.map { it.toUiModel() }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val mappedSales = _sales.map { sales ->
         sales.filter { !it.isSoftDeleted }.map { it.toUiModel() }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // Financial Metrics
     private val financials = combine(_deliveries, _sales) { deliveries, sales ->
@@ -148,14 +157,31 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val totalSalesCount = activeSalesCount + deliveredOutgoing.size
         
         Triple(totalRevenue, totalExpenses, Triple(incomingCost, totalSalesCount, deliveries.size))
-    }.stateIn(viewModelScope, SharingStarted.Lazily, Triple(0.0, 0.0, Triple(0.0, 0, 0)))
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Lazily, Triple(0.0, 0.0, Triple(0.0, 0, 0)))
+
+    // Navigation state flow
+    val navigationState: StateFlow<NavigationUiState> = userDao.getUserById(DEFAULT_USER_ID)
+        .distinctUntilChanged()
+        .map { user ->
+            NavigationUiState(
+                isProfileComplete = user != null && user.name.isNotEmpty() && user.name != "My Business",
+                isOnboardingCompleted = user?.isOnboardingCompleted ?: false,
+                isInitialized = true
+            )
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, NavigationUiState())
+
+    // Memoization variables for notifications
+    private var lastDeliveriesForNotifications: List<DeliveryUiModel>? = null
+    private var lastGeneratedNotifications: List<NotificationUiModel> = emptyList()
 
     // Final UI State
     val uiState: StateFlow<DashboardUiState> = combine(
         mappedDeliveries,
         mappedSales,
         financials,
-        userDao.getUserById(DEFAULT_USER_ID)
+        userDao.getUserById(DEFAULT_USER_ID).distinctUntilChanged()
     ) { deliveries, sales, fin, user ->
         val (revenue, expenses, stats) = fin
         val (incomingCost, totalSalesCount, totalDeliveries) = stats
@@ -178,11 +204,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             upcomingDeliveries = deliveries.filter { it.statusEnum != DeliveryStatus.DELIVERED && it.statusEnum != DeliveryStatus.CANCELLED },
             salesRecords = sales,
             pendingDeliveriesCount = deliveries.count { it.statusEnum != DeliveryStatus.DELIVERED && it.statusEnum != DeliveryStatus.CANCELLED },
-            notifications = generateNotifications(deliveries),
-            isProfileComplete = user != null && user.name.isNotEmpty() && user.name != "My Business",
-            isOnboardingCompleted = user?.isOnboardingCompleted ?: false
+            notifications = generateNotifications(deliveries)
         )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, DashboardUiState())
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, DashboardUiState())
 
     // Exposed flows for Profile editing
     private val _name = MutableStateFlow("")
@@ -217,39 +241,34 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     bio = "",
                     isOnboardingCompleted = false
                 ))
+            } else {
+                _name.value = user.name
+                _shopName.value = user.shopName
+                _address.value = user.address
+                _bio.value = user.bio
+                _email.value = user.email
+                _phoneNumber.value = user.phoneNumber
             }
         }
     }
 
     init {
         ensureDefaultUser()
-        syncProfileState()
-    }
-
-    private fun syncProfileState() {
-        viewModelScope.launch {
-            userDao.getUserById(DEFAULT_USER_ID).collectLatest { user ->
-                user?.let {
-                    _name.value = it.name
-                    _shopName.value = it.shopName
-                    _address.value = it.address
-                    _bio.value = it.bio
-                    _email.value = it.email
-                    _phoneNumber.value = it.phoneNumber
-                }
-            }
-        }
     }
 
     private fun generateNotifications(deliveries: List<DeliveryUiModel>): List<NotificationUiModel> {
+        if (deliveries == lastDeliveriesForNotifications) {
+            return lastGeneratedNotifications
+        }
         val newNotifications = mutableListOf<NotificationUiModel>()
-        val sdf = java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.getDefault())
-        val todayStr = sdf.format(java.util.Date())
+        val sdf = SimpleDateFormat("ddMMyyyy", Locale.getDefault())
+        val todayStr = sdf.format(Date())
         
         deliveries.filter { it.date == todayStr && it.statusEnum != DeliveryStatus.DELIVERED && it.statusEnum != DeliveryStatus.CANCELLED }
             .forEach { delivery ->
                 newNotifications.add(
                     NotificationUiModel(
+                        id = "delivery_${delivery.id}",
                         title = if (delivery.isOutgoing) "Outgoing Delivery Today" else "Incoming Delivery Today",
                         message = "${delivery.itemName} ${if (delivery.isOutgoing) "to" else "from"} ${delivery.customerName} at ${delivery.time}",
                         type = NotificationType.DELIVERY_REMINDER
@@ -257,9 +276,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         
-        newNotifications.add(NotificationUiModel(title = "Weekly Performance Summary", message = "Your weekly report is ready.", type = NotificationType.WEEKLY_SUMMARY, metadata = "WEEKLY"))
-        newNotifications.add(NotificationUiModel(title = "Monthly Business Overview", message = "See how your shop performed this month.", type = NotificationType.MONTHLY_SUMMARY, metadata = "MONTHLY"))
+        newNotifications.add(NotificationUiModel(id = "weekly_summary", title = "Weekly Performance Summary", message = "Your weekly report is ready.", type = NotificationType.WEEKLY_SUMMARY, metadata = "WEEKLY"))
+        newNotifications.add(NotificationUiModel(id = "monthly_summary", title = "Monthly Business Overview", message = "See how your shop performed this month.", type = NotificationType.MONTHLY_SUMMARY, metadata = "MONTHLY"))
         
+        lastDeliveriesForNotifications = deliveries
+        lastGeneratedNotifications = newNotifications
         return newNotifications
     }
 
